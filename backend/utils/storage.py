@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import UploadFile
 import cloudinary
 import cloudinary.uploader
+import cloudinary.api
 from config import (
     UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB,
     CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
@@ -87,6 +88,24 @@ def upload_image(filepath: str, folder: str, public_id: str) -> str:
         filepath, folder=folder, public_id=public_id, resource_type="image"
     )
     return result["secure_url"]
+
+
+def delete_event_cloudinary_files(event_id: str) -> bool:
+    """Delete all Cloudinary images stored under an event prefix."""
+    if not cloudinary_enabled():
+        return True
+
+    prefix = f"facefind/events/{event_id}"
+    try:
+        cloudinary.api.delete_resources_by_prefix(
+            prefix,
+            resource_type="image",
+            type="upload",
+        )
+        cloudinary.api.delete_folder(prefix)
+        return True
+    except Exception:
+        return False
 
 
 def delete_file(filepath: str) -> bool:
