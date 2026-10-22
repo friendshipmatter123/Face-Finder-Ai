@@ -13,11 +13,16 @@ import cv2
 from PIL import Image
 from pathlib import Path
 from typing import List, Tuple, Optional
-from config import FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_MODEL, THUMBNAIL_SIZE, THUMBNAIL_DIR
+from config import (
+    FACE_RECOGNITION_TOLERANCE, FACE_RECOGNITION_MODEL, THUMBNAIL_SIZE,
+    THUMBNAIL_DIR, MAX_PROCESSING_DIM,
+)
 import logging
 import time
+import threading
 
 logger = logging.getLogger(__name__)
+native_face_lock = threading.Lock()
 
 
 class FaceEngine:
@@ -33,14 +38,14 @@ class FaceEngine:
         try:
             if FACE_REC_AVAILABLE:
                 image = face_recognition.load_image_file(image_path)
-                return image
+                return self._resize_for_processing(image)
             else:
                 # Use OpenCV as fallback
                 img_cv = cv2.imread(str(image_path))
                 if img_cv is None:
                     return None
                 img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
-                return img_rgb
+                return self._resize_for_processing(img_rgb)
         except Exception as e:
             logger.error(f"Failed to load image {image_path}: {e}")
             return None
@@ -54,7 +59,7 @@ class FaceEngine:
                 return None
             # Convert BGR to RGB (face_recognition uses RGB)
             img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
-            return img_rgb
+            return self._resize_for_processing(img_rgb)
         except Exception as e:
             logger.error(f"Failed to load image from bytes: {e}")
             return None
@@ -187,11 +192,10 @@ class FaceEngine:
 
         if not FACE_REC_AVAILABLE:
             # DEMO MODE: Use Euclidean distance for comparison
-            distances = []
-            for encoding in known_encodings:
-                dist = np.linalg.norm(known_encodings - user_encoding)
-                distances.append(dist)
-            distances = np.array(distances)
+            distances = np.array([
+                np.linalg.norm(encoding - user_encoding)
+                for encoding in known_encodings
+            ])
         else:
             distances = face_recognition.face_distance(known_encodings, user_encoding)
         
@@ -205,6 +209,19 @@ class FaceEngine:
         # Sort by similarity descending (best matches first)
         matches.sort(key=lambda x: x[1], reverse=True)
         return matches
+
+    @staticmethod
+    def _resize_for_processing(image: np.ndarray) -> np.ndarray:
+        height, width = image.shape[:2]
+        largest_dimension = max(height, width)
+        if largest_dimension <= MAX_PROCESSING_DIM:
+            return image
+        scale = MAX_PROCESSING_DIM / largest_dimension
+        return cv2.resize(
+            image,
+            (max(1, int(width * scale)), max(1, int(height * scale))),
+            interpolation=cv2.INTER_AREA,
+        )
 
     def generate_thumbnail(self, image_path: str, photo_id: str) -> Optional[str]:
         """Generate a thumbnail for the image."""

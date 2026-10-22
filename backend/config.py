@@ -34,6 +34,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440
 # Face Recognition
 FACE_RECOGNITION_TOLERANCE = float(os.getenv("FACE_TOLERANCE", "0.5"))  # Lower = stricter
 FACE_RECOGNITION_MODEL = os.getenv("FACE_MODEL", "hog")  # "hog" (CPU) or "cnn" (GPU)
+MAX_PROCESSING_DIM = int(os.getenv("MAX_PROCESSING_DIM", "1600"))
 
 # Upload limits
 MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "20"))

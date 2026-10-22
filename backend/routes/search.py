@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from schemas import SearchResult, SearchResponse
 from database import get_db
 from models import EVENTS, PHOTOS, FACE_ENCODINGS
-from face_engine import face_engine
+from face_engine import face_engine, native_face_lock
 from config import FACE_RECOGNITION_TOLERANCE
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
@@ -21,7 +21,9 @@ async def search_face_in_event(
     event = db[EVENTS].find_one({"event_code": event_code, "is_active": True})
     if not event:
         raise HTTPException(status_code=404, detail="Event not found or inactive")
-    user_encoding = face_engine.encode_user_face(await face_image.read())
+    image_bytes = await face_image.read()
+    with native_face_lock:
+        user_encoding = face_engine.encode_user_face(image_bytes)
     if user_encoding is None:
         raise HTTPException(status_code=400, detail="No face detected in the uploaded image. Please upload a clear photo with your face visible.")
 
@@ -37,7 +39,8 @@ async def search_face_in_event(
             continue
     search_tolerance = tolerance or FACE_RECOGNITION_TOLERANCE
     engine = face_engine if search_tolerance == FACE_RECOGNITION_TOLERANCE else __import__("face_engine").FaceEngine(tolerance=search_tolerance)
-    matches = engine.compare_faces(known_encodings, user_encoding)
+    with native_face_lock:
+        matches = engine.compare_faces(known_encodings, user_encoding)
     results, seen = [], set()
     for idx, similarity in matches:
         record = record_map[idx]

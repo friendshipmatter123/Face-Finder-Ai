@@ -12,7 +12,7 @@ from schemas import PhotoResponse
 from auth import get_current_admin
 from database import get_db, database
 from models import EVENTS, PHOTOS, FACE_ENCODINGS
-from face_engine import face_engine
+from face_engine import face_engine, native_face_lock
 from utils.storage import save_upload_file, delete_file, upload_image
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,8 @@ def process_single_photo(photo_id: str, filepath: str):
                 raise FileNotFoundError(f"Photo file is unavailable: {filepath}")
         width, height = face_engine.get_image_dimensions(filepath)
         thumbnail_path = face_engine.generate_thumbnail(filepath, photo_id)
-        result = face_engine.process_photo(filepath)
+        with native_face_lock:
+            result = face_engine.process_photo(filepath)
         update = {
             "width": width, "height": height,
             "thumbnail_path": thumbnail_path,
