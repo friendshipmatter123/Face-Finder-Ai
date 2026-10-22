@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [copiedCode, setCopiedCode] = useState(null);
 
   // New event form
-  const [newEvent, setNewEvent] = useState({ name: '', description: '', is_public: false });
+  const [newEvent, setNewEvent] = useState({ name: '', description: '' });
 
   useEffect(() => {
     fetchData();
@@ -54,7 +54,7 @@ export default function DashboardPage() {
       const res = await createEvent(newEvent);
       toast.success(`Event "${res.data.name}" created! Code: ${res.data.event_code}`);
       setShowCreateModal(false);
-      setNewEvent({ name: '', description: '', is_public: false });
+      setNewEvent({ name: '', description: '' });
       fetchData();
     } catch (err) {
       toast.error('Failed to create event');
@@ -199,15 +199,6 @@ export default function DashboardPage() {
                   className="input-field h-24 resize-none"
                 />
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={newEvent.is_public}
-                  onChange={(e) => setNewEvent({ ...newEvent, is_public: e.target.checked })}
-                  className="w-4 h-4 rounded accent-primary-500"
-                />
-                <span className="text-sm text-slate-300">Make event public (no code required)</span>
-              </label>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"

@@ -23,11 +23,11 @@ export default function Navbar() {
     <nav className="glass sticky top-0 z-50 border-b border-slate-700/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo - Jain Group Style */}
+          {/* Application logo */}
           <Link to="/" className="flex items-center gap-3" onClick={closeMenu}>
-            <img src="/jain-logo.png" alt="Jain Group" className="w-9 h-9 rounded" />
+            <img src="/jain-logo.png" alt="Find Ur Photos" className="w-9 h-9 rounded" />
             <div className="flex flex-col leading-tight">
-              <span className="text-lg sm:text-xl font-bold text-white tracking-wide">Jain Group</span>
+              <span className="text-lg sm:text-xl font-bold text-white tracking-wide">Find Ur Photos</span>
               <span className="text-[10px] text-slate-400 tracking-widest uppercase">FaceFind AI</span>
             </div>
           </Link>
