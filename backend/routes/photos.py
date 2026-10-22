@@ -2,6 +2,8 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 from typing import List
+import gc
+import threading
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from schemas import PhotoResponse
 from auth import get_current_admin
@@ -12,6 +14,7 @@ from utils.storage import save_upload_file, delete_file, upload_image
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/photos", tags=["Photos"])
+_processing_lock = threading.Lock()
 
 
 def process_single_photo(photo_id: str, filepath: str):
@@ -58,23 +61,31 @@ def process_single_photo(photo_id: str, filepath: str):
         logger.info("Processed photo %s: %s faces found", photo_id, result["faces_count"])
     except Exception:
         logger.exception("Error processing photo %s", photo_id)
+    finally:
+        # face_recognition/OpenCV allocate native buffers that should be released
+        # before the next high-resolution photo is decoded.
+        width = height = thumbnail_path = result = update = None
+        gc.collect()
 
 
 def process_batch_photos(event_id: str, photo_ids: List[str]):
-    database[EVENTS].update_one({"id": event_id}, {"$set": {"processing_status": "processing"}})
-    for photo_id in photo_ids:
-        photo = database[PHOTOS].find_one({"id": photo_id})
-        if photo and not photo.get("is_processed", False):
-            process_single_photo(photo_id, photo["local_filepath"])
-    database[EVENTS].update_one(
-        {"id": event_id},
-        {"$set": {
-            "processing_status": "completed",
-            "total_photos": database[PHOTOS].count_documents({"event_id": event_id}),
-            "total_faces": database[FACE_ENCODINGS].count_documents({"event_id": event_id}),
-            "updated_at": datetime.utcnow(),
-        }},
-    )
+    # Prevent multiple upload requests from running native face processing
+    # concurrently on a small Render instance.
+    with _processing_lock:
+        database[EVENTS].update_one({"id": event_id}, {"$set": {"processing_status": "processing"}})
+        for photo_id in photo_ids:
+            photo = database[PHOTOS].find_one({"id": photo_id})
+            if photo and not photo.get("is_processed", False):
+                process_single_photo(photo_id, photo["local_filepath"])
+        database[EVENTS].update_one(
+            {"id": event_id},
+            {"$set": {
+                "processing_status": "completed",
+                "total_photos": database[PHOTOS].count_documents({"event_id": event_id}),
+                "total_faces": database[FACE_ENCODINGS].count_documents({"event_id": event_id}),
+                "updated_at": datetime.utcnow(),
+            }},
+        )
 
 
 @router.post("/upload/{event_id}", response_model=List[PhotoResponse])

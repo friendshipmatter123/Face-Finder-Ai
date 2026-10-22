@@ -53,17 +53,22 @@ async def save_upload_file(file: UploadFile, event_id: str) -> dict:
     event_dir = get_event_upload_dir(event_id)
     filepath = event_dir / unique_name
 
-    # Save file
-    contents = await file.read()
-    file_size = len(contents)
-
-    # Validate size
+    # Stream to disk so a large upload does not require a second full copy in RAM.
     max_bytes = MAX_FILE_SIZE_MB * 1024 * 1024
-    if file_size > max_bytes:
-        raise ValueError(f"File too large. Max size: {MAX_FILE_SIZE_MB}MB")
-
-    with open(filepath, "wb") as f:
-        f.write(contents)
+    file_size = 0
+    try:
+        with open(filepath, "wb") as output:
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                file_size += len(chunk)
+                if file_size > max_bytes:
+                    raise ValueError(f"File too large. Max size: {MAX_FILE_SIZE_MB}MB")
+                output.write(chunk)
+    except Exception:
+        filepath.unlink(missing_ok=True)
+        raise
 
     cloudinary_url = None
     if cloudinary_enabled():
