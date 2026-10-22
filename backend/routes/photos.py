@@ -8,7 +8,7 @@ from auth import get_current_admin
 from database import get_db, database
 from models import EVENTS, PHOTOS, FACE_ENCODINGS
 from face_engine import face_engine
-from utils.storage import save_upload_file, delete_file
+from utils.storage import save_upload_file, delete_file, upload_image
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/photos", tags=["Photos"])
@@ -29,6 +29,16 @@ def process_single_photo(photo_id: str, filepath: str):
             "is_processed": True,
         }
         database[PHOTOS].update_one({"id": photo_id}, {"$set": update})
+        if thumbnail_path:
+            update["thumbnail_path"] = upload_image(
+                thumbnail_path,
+                f"facefind/events/{photo['event_id']}/thumbnails",
+                photo_id,
+            )
+            database[PHOTOS].update_one(
+                {"id": photo_id},
+                {"$set": {"thumbnail_path": update["thumbnail_path"]}},
+            )
         database[FACE_ENCODINGS].delete_many({"photo_id": photo_id})
         if result["success"]:
             records = []
@@ -55,7 +65,7 @@ def process_batch_photos(event_id: str, photo_ids: List[str]):
     for photo_id in photo_ids:
         photo = database[PHOTOS].find_one({"id": photo_id})
         if photo and not photo.get("is_processed", False):
-            process_single_photo(photo_id, photo["filepath"])
+            process_single_photo(photo_id, photo["local_filepath"])
     database[EVENTS].update_one(
         {"id": event_id},
         {"$set": {
@@ -88,11 +98,18 @@ async def upload_photos(
                 "id": uuid4().hex, "filename": file_data["filename"],
                 "original_filename": file_data["original_filename"],
                 "filepath": file_data["filepath"], "thumbnail_path": None,
+                "local_filepath": file_data["filepath"],
                 "file_size": file_data["file_size"], "width": None, "height": None,
                 "faces_count": 0, "is_processed": False, "event_id": event_id,
                 "created_at": datetime.utcnow(),
             }
             db[PHOTOS].insert_one(photo)
+            if file_data.get("cloudinary_url"):
+                db[PHOTOS].update_one(
+                    {"id": photo["id"]},
+                    {"$set": {"filepath": file_data["cloudinary_url"]}},
+                )
+                photo["filepath"] = file_data["cloudinary_url"]
             uploaded.append(photo)
             photo_ids.append(photo["id"])
         except ValueError as exc:

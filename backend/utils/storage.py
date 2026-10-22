@@ -6,7 +6,25 @@ import shutil
 import uuid
 from pathlib import Path
 from fastapi import UploadFile
-from config import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB
+import cloudinary
+import cloudinary.uploader
+from config import (
+    UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB,
+    CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
+)
+
+
+def cloudinary_enabled() -> bool:
+    return all((CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET))
+
+
+if cloudinary_enabled():
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
+        secure=True,
+    )
 
 
 def get_event_upload_dir(event_id: str) -> Path:
@@ -43,17 +61,39 @@ async def save_upload_file(file: UploadFile, event_id: str) -> dict:
     with open(filepath, "wb") as f:
         f.write(contents)
 
+    cloudinary_url = None
+    if cloudinary_enabled():
+        result = cloudinary.uploader.upload(
+            str(filepath),
+            folder=f"facefind/events/{event_id}/originals",
+            public_id=Path(unique_name).stem,
+            resource_type="image",
+        )
+        cloudinary_url = result["secure_url"]
+
     return {
         "filename": unique_name,
         "filepath": str(filepath),
+        "cloudinary_url": cloudinary_url,
         "file_size": file_size,
         "original_filename": file.filename,
     }
 
 
+def upload_image(filepath: str, folder: str, public_id: str) -> str:
+    if not cloudinary_enabled():
+        raise RuntimeError("Cloudinary is not configured")
+    result = cloudinary.uploader.upload(
+        filepath, folder=folder, public_id=public_id, resource_type="image"
+    )
+    return result["secure_url"]
+
+
 def delete_file(filepath: str) -> bool:
     """Delete a file from storage."""
     try:
+        if filepath.startswith(("http://", "https://")):
+            return True
         path = Path(filepath)
         if path.exists():
             path.unlink()

@@ -21,6 +21,11 @@ for d in [UPLOAD_DIR, THUMBNAIL_DIR, TEMP_DIR]:
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "facefind")
 
+# Cloudinary object storage
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
+
 # JWT Auth
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-key-set-SECRET_KEY-in-env")
 ALGORITHM = "HS256"
