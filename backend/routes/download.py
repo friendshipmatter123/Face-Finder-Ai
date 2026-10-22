@@ -22,9 +22,10 @@ def require_photo(photo_id: str, db):
 @router.get("/photo/{photo_id}")
 async def serve_photo(photo_id: str, db=Depends(get_db)):
     photo = require_photo(photo_id, db)
-    if photo["filepath"].startswith(("http://", "https://")):
-        return RedirectResponse(photo["filepath"])
-    filepath = Path(photo["filepath"])
+    filepath_value = photo.get("filepath") or ""
+    if filepath_value.startswith(("http://", "https://")):
+        return RedirectResponse(filepath_value)
+    filepath = Path(filepath_value)
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="Photo file not found on disk")
     return FileResponse(path=str(filepath), filename=photo["original_filename"], media_type="image/jpeg")
@@ -33,9 +34,13 @@ async def serve_photo(photo_id: str, db=Depends(get_db)):
 @router.get("/thumbnail/{photo_id}")
 async def serve_thumbnail(photo_id: str, db=Depends(get_db)):
     photo = require_photo(photo_id, db)
-    if photo.get("thumbnail_path", "").startswith(("http://", "https://")):
-        return RedirectResponse(photo["thumbnail_path"])
-    path = Path(photo["thumbnail_path"]) if photo.get("thumbnail_path") else Path(photo["filepath"])
+    thumbnail_value = photo.get("thumbnail_path") or ""
+    original_value = photo.get("filepath") or ""
+    if thumbnail_value.startswith(("http://", "https://")):
+        return RedirectResponse(thumbnail_value)
+    path = Path(thumbnail_value or original_value)
+    if original_value.startswith(("http://", "https://")) and not thumbnail_value:
+        return RedirectResponse(original_value)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Photo file not found")
     return FileResponse(path=str(path), media_type="image/jpeg")
@@ -74,9 +79,10 @@ async def download_zip(photo_ids: List[str], db=Depends(get_db)):
 @router.get("/download/{photo_id}")
 async def download_single(photo_id: str, db=Depends(get_db)):
     photo = require_photo(photo_id, db)
-    if photo["filepath"].startswith(("http://", "https://")):
-        return RedirectResponse(photo["filepath"])
-    filepath = Path(photo["filepath"])
+    filepath_value = photo.get("filepath") or ""
+    if filepath_value.startswith(("http://", "https://")):
+        return RedirectResponse(filepath_value)
+    filepath = Path(filepath_value)
     if not filepath.exists():
         raise HTTPException(status_code=404, detail="Photo file not found")
     return FileResponse(path=str(filepath), filename=photo["original_filename"], media_type="application/octet-stream")
