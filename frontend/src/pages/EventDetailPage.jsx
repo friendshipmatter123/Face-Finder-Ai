@@ -68,8 +68,8 @@ export default function EventDetailPage() {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    if (files.length > 500) {
-      toast.error('Max 500 files per upload. Please upload in batches.');
+    if (files.length > 25) {
+      toast.error('Max 25 files per upload. Please upload in smaller batches.');
       return;
     }
 
@@ -225,7 +225,7 @@ export default function EventDetailPage() {
             <>
               <FiUpload size={32} className="text-slate-500 mx-auto mb-3" />
               <p className="text-slate-300 mb-1">Click to upload photos or drag & drop</p>
-              <p className="text-xs text-slate-500">JPG, PNG, WebP • Max 20MB each • Up to 500 per batch</p>
+              <p className="text-xs text-slate-500">JPG, PNG, WebP • Max 20MB each • Up to 25 per batch</p>
             </>
           )}
         </div>

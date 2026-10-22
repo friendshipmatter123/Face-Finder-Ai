@@ -14,6 +14,7 @@ from database import get_db, database
 from models import EVENTS, PHOTOS, FACE_ENCODINGS
 from face_engine import face_engine, native_face_lock
 from utils.storage import save_upload_file, delete_file, upload_image
+from config import MAX_BULK_UPLOAD
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/photos", tags=["Photos"])
@@ -115,6 +116,11 @@ async def retry_processing(
     event = db[EVENTS].find_one({"id": event_id, "admin_id": admin["id"]})
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
+    if event.get("processing_status") == "processing":
+        raise HTTPException(
+            status_code=409,
+            detail="Processing is already running. Wait for the current attempt to finish or for the service to restart.",
+        )
     pending = list(db[PHOTOS].find(
         {"event_id": event_id, "is_processed": {"$ne": True}},
         {"id": 1},
@@ -144,8 +150,11 @@ async def upload_photos(
     event = db[EVENTS].find_one({"id": event_id, "admin_id": admin["id"]})
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    if len(files) > 500:
-        raise HTTPException(status_code=400, detail="Max 500 files per upload batch")
+    if len(files) > MAX_BULK_UPLOAD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Max {MAX_BULK_UPLOAD} files per upload batch",
+        )
     uploaded, photo_ids = [], []
     for file in files:
         try:

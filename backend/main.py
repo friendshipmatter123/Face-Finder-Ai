@@ -10,7 +10,7 @@ from config import (
     DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD,
     UPLOAD_DIR, THUMBNAIL_DIR,
 )
-from models import ADMINS
+from models import ADMINS, EVENTS
 from database import database
 from routes import admin, events, photos, search, download
 
@@ -50,6 +50,14 @@ app.include_router(download.router)
 async def startup():
     logger.info("FaceFind starting up...")
     init_db()
+    # BackgroundTasks are in-process; a Render restart terminates them.
+    # Release stale processing flags so the admin can retry safely.
+    reset_result = database[EVENTS].update_many(
+        {"processing_status": "processing"},
+        {"$set": {"processing_status": "idle", "updated_at": __import__("datetime").datetime.utcnow()}},
+    )
+    if reset_result.modified_count:
+        logger.warning("Reset %s stale processing event(s) after startup", reset_result.modified_count)
     existing = database[ADMINS].find_one({"email": DEFAULT_ADMIN_EMAIL})
     if not existing:
         database[ADMINS].insert_one({
