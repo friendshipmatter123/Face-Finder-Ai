@@ -8,8 +8,7 @@ uvicorn[standard]==0.30.0
 python-multipart==0.0.9
 
 # Database
-sqlalchemy==2.0.30
-aiosqlite==0.20.0
+pymongo==4.10.1
 
 # Authentication
 python-jose[cryptography]==3.3.0

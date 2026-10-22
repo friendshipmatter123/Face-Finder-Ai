@@ -1,15 +1,12 @@
-# ============================================
-# FaceFind Backend - JWT Authentication
-# ============================================
+"""JWT authentication backed by MongoDB."""
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
 from database import get_db
-from models import Admin
+from models import ADMINS
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -33,27 +30,23 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def decode_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
-    except JWTError:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-        )
+        ) from exc
 
 
 async def get_current_admin(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-) -> Admin:
-    """Dependency: get current authenticated admin."""
+    db=Depends(get_db),
+) -> dict:
     payload = decode_token(credentials.credentials)
     admin_id = payload.get("sub")
     if not admin_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
-
-    admin = db.query(Admin).filter(Admin.id == admin_id).first()
-    if not admin or not admin.is_active:
+    admin = db[ADMINS].find_one({"id": admin_id})
+    if not admin or not admin.get("is_active", False):
         raise HTTPException(status_code=401, detail="Admin not found or inactive")
-
     return admin

@@ -1,31 +1,31 @@
-# ============================================
-# FaceFind Backend - Database Setup
-# ============================================
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from config import DATABASE_URL
+"""MongoDB client and database dependency."""
+from pymongo import ASCENDING, DESCENDING, MongoClient
+from config import MONGODB_URL, MONGODB_DATABASE
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    pool_pre_ping=True,
+
+client = MongoClient(
+    MONGODB_URL,
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+    appname="facefind-api",
 )
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+database = client[MONGODB_DATABASE]
 
 
 def get_db():
-    """Dependency: yields a database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """FastAPI dependency returning the shared MongoDB database."""
+    yield database
 
 
 def init_db():
-    """Create all tables."""
-    from models import Admin, Event, Photo, FaceEncoding  # noqa
-    Base.metadata.create_all(bind=engine)
+    """Verify MongoDB and create indexes used by the API."""
+    client.admin.command("ping")
+    database.admins.create_index([("email", ASCENDING)], unique=True)
+    database.events.create_index([("event_code", ASCENDING)], unique=True)
+    database.events.create_index([("admin_id", ASCENDING), ("created_at", DESCENDING)])
+    database.photos.create_index([("event_id", ASCENDING), ("created_at", DESCENDING)])
+    database.face_encodings.create_index([("event_id", ASCENDING)])
+
+
+def close_db():
+    client.close()

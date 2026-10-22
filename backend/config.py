@@ -18,7 +18,8 @@ for d in [UPLOAD_DIR, THUMBNAIL_DIR, TEMP_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # Database
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'facefind.db'}")
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "facefind")
 
 # JWT Auth
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-key-set-SECRET_KEY-in-env")
