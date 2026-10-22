@@ -1,0 +1,27 @@
+# ============================================
+# FaceFind Backend - Python Dependencies
+# ============================================
+
+# Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.30
+aiosqlite==0.20.0
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# AI / Computer Vision
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+scikit-learn==1.5.1
+Pillow==10.4.0
+
+# Utilities
+python-dotenv==1.0.1
+setuptools>=69.5.1

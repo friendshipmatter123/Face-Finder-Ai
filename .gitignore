@@ -1,0 +1,46 @@
+# ── Dependencies ──
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+.venv/
+
+# ── Database ──
+*.db
+*.sqlite3
+
+# ── User data (generated at runtime) ──
+backend/uploads/
+backend/thumbnails/
+backend/temp/
+
+# ── Environment secrets ──
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# ── IDE / Editor ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*.code-workspace
+
+# ── OS junk ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Build artifacts ──
+dist/
+build/
+*.egg-info/
+frontend/dist/
+
+# ── Logs ──
+*.log
