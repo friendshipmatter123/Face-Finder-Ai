@@ -9,10 +9,13 @@ from fastapi import UploadFile
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import logging
 from config import (
     UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_FILE_SIZE_MB,
     CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def cloudinary_enabled() -> bool:
@@ -97,14 +100,35 @@ def delete_event_cloudinary_files(event_id: str) -> bool:
 
     prefix = f"facefind/events/{event_id}"
     try:
-        cloudinary.api.delete_resources_by_prefix(
-            prefix,
-            resource_type="image",
-            type="upload",
-        )
-        cloudinary.api.delete_folder(prefix)
+        for asset_prefix in (f"{prefix}/originals", f"{prefix}/thumbnails"):
+            next_cursor = None
+            while True:
+                options = {
+                    "resource_type": "image",
+                    "type": "upload",
+                    "invalidate": True,
+                }
+                if next_cursor:
+                    options["next_cursor"] = next_cursor
+                result = cloudinary.api.delete_resources_by_prefix(asset_prefix, **options)
+                next_cursor = result.get("next_cursor")
+                if not next_cursor:
+                    break
+
+            # Folder deletion is best-effort; deleting the assets is the
+            # persistence guarantee, while Cloudinary may retain empty folders.
+            try:
+                cloudinary.api.delete_folder(asset_prefix)
+            except Exception:
+                logger.info("Cloudinary folder already empty or unavailable: %s", asset_prefix)
+
+        try:
+            cloudinary.api.delete_folder(prefix)
+        except Exception:
+            logger.info("Cloudinary parent folder already empty or unavailable: %s", prefix)
         return True
     except Exception:
+        logger.exception("Cloudinary cleanup failed for event %s", event_id)
         return False
 
 
