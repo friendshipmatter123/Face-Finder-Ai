@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import {
   getEvent, uploadPhotos, listEventPhotos,
-  getProcessingStatus, deletePhoto
+  getProcessingStatus, deletePhoto, retryProcessing
 } from '../services/api';
 import PhotoGrid from '../components/PhotoGrid';
 
@@ -26,6 +26,7 @@ export default function EventDetailPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingStatus, setProcessingStatus] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -101,6 +102,19 @@ export default function EventDetailPage() {
     }
   };
 
+  const handleRetryProcessing = async () => {
+    setRetrying(true);
+    try {
+      await retryProcessing(eventId);
+      toast.success('Photo processing restarted');
+      fetchProcessingStatus();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not restart processing');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -159,6 +173,16 @@ export default function EventDetailPage() {
             {processingStatus?.status || event.processing_status}
             {processingStatus?.status === 'processing' && ` (${processingStatus.progress_percent}%)`}
           </span>
+          {processingStatus?.status === 'processing' && (
+            <button
+              onClick={handleRetryProcessing}
+              disabled={retrying}
+              className="flex items-center gap-1 text-xs text-primary-300 hover:text-white disabled:opacity-50"
+            >
+              <FiRefreshCw size={13} className={retrying ? 'animate-spin' : ''} />
+              Restart processing
+            </button>
+          )}
         </div>
 
         {/* Processing progress bar */}

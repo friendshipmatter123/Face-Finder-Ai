@@ -4,6 +4,9 @@ from uuid import uuid4
 from typing import List
 import gc
 import threading
+import tempfile
+from pathlib import Path
+from urllib.request import urlretrieve
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
 from schemas import PhotoResponse
 from auth import get_current_admin
@@ -21,7 +24,18 @@ def process_single_photo(photo_id: str, filepath: str):
     photo = database[PHOTOS].find_one({"id": photo_id})
     if not photo:
         return
+    temporary_path = None
     try:
+        if not Path(filepath).exists():
+            cloudinary_url = photo.get("filepath", "")
+            if cloudinary_url.startswith(("http://", "https://")):
+                temporary_file = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                temporary_path = temporary_file.name
+                temporary_file.close()
+                urlretrieve(cloudinary_url, temporary_path)
+                filepath = temporary_path
+            else:
+                raise FileNotFoundError(f"Photo file is unavailable: {filepath}")
         width, height = face_engine.get_image_dimensions(filepath)
         thumbnail_path = face_engine.generate_thumbnail(filepath, photo_id)
         result = face_engine.process_photo(filepath)
@@ -65,6 +79,8 @@ def process_single_photo(photo_id: str, filepath: str):
         # face_recognition/OpenCV allocate native buffers that should be released
         # before the next high-resolution photo is decoded.
         width = height = thumbnail_path = result = update = None
+        if temporary_path:
+            Path(temporary_path).unlink(missing_ok=True)
         gc.collect()
 
 
@@ -86,6 +102,34 @@ def process_batch_photos(event_id: str, photo_ids: List[str]):
                 "updated_at": datetime.utcnow(),
             }},
         )
+
+
+@router.post("/retry/{event_id}", status_code=202)
+async def retry_processing(
+    event_id: str,
+    background_tasks: BackgroundTasks,
+    admin: dict = Depends(get_current_admin),
+    db=Depends(get_db),
+):
+    event = db[EVENTS].find_one({"id": event_id, "admin_id": admin["id"]})
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    pending = list(db[PHOTOS].find(
+        {"event_id": event_id, "is_processed": {"$ne": True}},
+        {"id": 1},
+    ))
+    if not pending:
+        db[EVENTS].update_one(
+            {"id": event_id},
+            {"$set": {"processing_status": "completed", "updated_at": datetime.utcnow()}},
+        )
+        return {"message": "All photos are already processed"}
+    db[EVENTS].update_one(
+        {"id": event_id},
+        {"$set": {"processing_status": "processing", "updated_at": datetime.utcnow()}},
+    )
+    background_tasks.add_task(process_batch_photos, event_id, [photo["id"] for photo in pending])
+    return {"message": f"Retry started for {len(pending)} photos"}
 
 
 @router.post("/upload/{event_id}", response_model=List[PhotoResponse])

@@ -5,7 +5,6 @@ from schemas import AdminCreate, AdminLogin, AdminResponse, Token, DashboardStat
 from auth import hash_password, verify_password, create_access_token, get_current_admin
 from database import get_db
 from models import ADMINS, EVENTS, PHOTOS, FACE_ENCODINGS
-from utils.storage import get_storage_size_mb
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -42,10 +41,16 @@ async def get_me(admin: dict = Depends(get_current_admin)):
 async def get_dashboard(admin: dict = Depends(get_current_admin), db=Depends(get_db)):
     event_filter = {"admin_id": admin["id"]}
     event_ids = [e["id"] for e in db[EVENTS].find(event_filter, {"id": 1})]
+    photo_totals = db[PHOTOS].aggregate([
+        {"$match": {"event_id": {"$in": event_ids}}},
+        {"$group": {"_id": None, "bytes": {"$sum": {"$ifNull": ["$file_size", 0]}}}},
+    ])
+    storage_bytes = next(photo_totals, {}).get("bytes", 0)
     return DashboardStats(
         total_events=db[EVENTS].count_documents(event_filter),
         total_photos=db[PHOTOS].count_documents({"event_id": {"$in": event_ids}}),
         total_faces=db[FACE_ENCODINGS].count_documents({"event_id": {"$in": event_ids}}),
         active_events=db[EVENTS].count_documents({**event_filter, "is_active": True}),
-        storage_used_mb=get_storage_size_mb(),
+        # Files are persisted in Cloudinary; Render's local disk is only temporary.
+        storage_used_mb=round(storage_bytes / (1024 * 1024), 2),
     )

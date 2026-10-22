@@ -82,6 +82,9 @@ export const listEventPhotos = (eventId, skip = 0, limit = 50) =>
 export const getProcessingStatus = (eventId) =>
   api.get(`/photos/processing-status/${eventId}`);
 
+export const retryProcessing = (eventId) =>
+  api.post(`/photos/retry/${eventId}`);
+
 export const deletePhoto = (photoId) =>
   api.delete(`/photos/${photoId}`);
 
