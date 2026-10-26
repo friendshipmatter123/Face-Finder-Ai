@@ -1,8 +1,7 @@
 from datetime import datetime
-from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
-from schemas import AdminCreate, AdminLogin, AdminResponse, Token, DashboardStats
-from auth import hash_password, verify_password, create_access_token, get_current_admin
+from schemas import AdminLogin, AdminResponse, Token, DashboardStats
+from auth import verify_password, create_access_token, get_current_admin
 from database import get_db
 from models import ADMINS, EVENTS, PHOTOS, FACE_ENCODINGS
 
@@ -17,19 +16,6 @@ async def admin_login(data: AdminLogin, db=Depends(get_db)):
     if not admin.get("is_active", False):
         raise HTTPException(status_code=403, detail="Account is deactivated")
     return {"access_token": create_access_token({"sub": admin["id"], "email": admin["email"]}), "token_type": "bearer"}
-
-
-@router.post("/register", response_model=AdminResponse, status_code=201)
-async def admin_register(data: AdminCreate, db=Depends(get_db)):
-    if db[ADMINS].find_one({"email": data.email}):
-        raise HTTPException(status_code=400, detail="Email already registered")
-    admin = {
-        "id": uuid4().hex, "email": data.email,
-        "hashed_password": hash_password(data.password), "name": data.name,
-        "is_active": True, "created_at": datetime.utcnow(),
-    }
-    db[ADMINS].insert_one(admin)
-    return admin
 
 
 @router.get("/me", response_model=AdminResponse)

@@ -17,17 +17,21 @@ TEMP_DIR = BASE_DIR / "temp"
 for d in [UPLOAD_DIR, THUMBNAIL_DIR, TEMP_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
-# Database
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+# Local-only storage
+LOCAL_ONLY = os.getenv("LOCAL_ONLY", "true").lower() == "true"
+MONGODB_URL = (
+    "mongodb://127.0.0.1:27017"
+    if LOCAL_ONLY
+    else os.getenv("MONGODB_URL", "mongodb://127.0.0.1:27017")
+)
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "facefind")
 
-# Cloudinary object storage
-CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME", "")
-CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
-CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
-
 # JWT Auth
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-key-set-SECRET_KEY-in-env")
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be configured in backend/.env")
+if len(SECRET_KEY) < 32:
+    raise RuntimeError("SECRET_KEY must contain at least 32 characters")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))  # 24 hours
 
@@ -52,6 +56,8 @@ DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 # CORS
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 
-# Default admin credentials
-DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@facefind.com")
-DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "changeme")
+# Initial admin credentials
+DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip()
+DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+if not DEFAULT_ADMIN_EMAIL or not DEFAULT_ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_EMAIL and ADMIN_PASSWORD must be configured in backend/.env")

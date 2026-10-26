@@ -36,9 +36,6 @@ api.interceptors.response.use(
 export const adminLogin = (email, password) =>
   api.post('/admin/login', { email, password });
 
-export const adminRegister = (email, password, name) =>
-  api.post('/admin/register', { email, password, name });
-
 export const getAdminProfile = () =>
   api.get('/admin/me');
 

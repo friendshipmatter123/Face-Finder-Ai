@@ -7,12 +7,6 @@ from pydantic import BaseModel, EmailStr
 
 
 # ──── Auth ────
-class AdminCreate(BaseModel):
-    email: str
-    password: str
-    name: str = "Admin"
-
-
 class AdminLogin(BaseModel):
     email: str
     password: str

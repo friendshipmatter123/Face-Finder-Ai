@@ -13,10 +13,10 @@ Find Ur Photos is an AI-powered web application that allows event organizers to 
 | Frontend | React.js + Tailwind CSS |
 | Backend | Python FastAPI |
 | AI/CV | OpenCV + face_recognition (dlib) |
-| Database | MongoDB Atlas |
-| Persistent image storage | Cloudinary |
-| Temporary processing storage | Local disk (`uploads/`, `thumbnails/`, `temp/`) |
-| Deployment | Render (backend) + Vercel (frontend) |
+| Database | Local MongoDB |
+| Image storage | Local filesystem (`backend/uploads/`, `backend/thumbnails/`) |
+| Processing storage | Local filesystem (`backend/temp/`) |
+| Deployment | Local development (offline-capable) |
 
 ## 📁 Project Structure
 
@@ -124,10 +124,10 @@ Local development requires:
 
 - Python 3.11+
 - Node.js 18+
-- A MongoDB instance or MongoDB Atlas connection
-- Cloudinary credentials if persistent image uploads are required
+- A local MongoDB service
 
 Create `backend/.env` from `backend/.env.example`. Do not commit `backend/.env`; it contains credentials.
+Public admin registration is disabled. Configure the initial admin using `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`.
 
 ## 🔄 System Workflow
 
@@ -140,14 +140,14 @@ Create `backend/.env` from `backend/.env.example`. Do not commit `backend/.env`;
 
 ### Storage and processing
 
-- Original photos are uploaded to Cloudinary under `facefind/events/<event-id>/originals`.
-- Generated thumbnails are uploaded under `facefind/events/<event-id>/thumbnails`.
-- MongoDB stores event, photo metadata, and face encodings.
-- Render's local filesystem is temporary. It is used only while face processing is running.
+- Original photos are stored in `backend/uploads/<event-id>/`.
+- Generated thumbnails are stored in `backend/thumbnails/`.
+- MongoDB stores event, photo metadata, and face encodings in the local `facefind` database.
+- No Cloudinary, MongoDB Atlas, or internet connection is required in local-only mode.
 - Processing images are resized to `MAX_PROCESSING_DIM` (default `1000`) to reduce memory usage.
 - Upload batches are limited by `MAX_BULK_UPLOAD` (default `25`). Smaller batches are recommended on Render's free instance.
-- If Render restarts during processing, open the event and use **Restart processing**. Unprocessed photos are downloaded from Cloudinary and retried.
-- The dashboard's storage figure is the sum of uploaded photo sizes recorded in MongoDB; it is not Render disk usage.
+- If the local process stops during processing, open the event and use **Restart processing**. Unprocessed photos remain on the local disk.
+- The dashboard's storage figure is the sum of uploaded photo sizes recorded in MongoDB.
 
 Events are accessed using their event code. The admin UI does not expose a public-event/no-code option.
 
@@ -155,9 +155,36 @@ Events are accessed using their event code. The admin UI does not expose a publi
 
 ## 🌐 Deployment Guide
 
-### Option 1: Render.com + Vercel (Recommended)
+### Local offline mode
 
-This setup deploys the FastAPI backend on Render and the React frontend on Vercel. MongoDB Atlas and Cloudinary provide persistent data and image storage.
+The application is configured for local-only mode by default:
+
+```env
+LOCAL_ONLY=true
+MONGODB_URL=mongodb://127.0.0.1:27017
+MONGODB_DATABASE=facefind
+```
+
+Start the **MongoDB** Windows service before starting the backend:
+
+```powershell
+Get-Service MongoDB
+Start-Service MongoDB
+```
+
+Verify that these local folders exist; the application creates them automatically:
+
+```text
+backend/uploads/
+backend/thumbnails/
+backend/temp/
+```
+
+The local database and image files are persistent across application restarts. Back up the MongoDB `facefind` database and the three backend folders if the computer or disk could fail.
+
+### Online deployment (not used by local-only mode)
+
+For Render/Vercel deployment, set `LOCAL_ONLY=false`, then provide MongoDB Atlas and Cloudinary credentials. Render's local disk is not persistent, so online deployment should use external database and object storage.
 
 #### Step A: Deploy Backend on Render.com
 
@@ -184,13 +211,14 @@ This setup deploys the FastAPI backend on Render and the React frontend on Verce
 
 5. **Add Environment Variables** (in Render dashboard):
    ```
+   LOCAL_ONLY=false
    MONGODB_URL=mongodb+srv://<user>:<password>@<cluster-host>/facefind?retryWrites=true&w=majority
    MONGODB_DATABASE=facefind
    CLOUDINARY_CLOUD_NAME=your-cloud-name
    CLOUDINARY_API_KEY=your-api-key
    CLOUDINARY_API_SECRET=your-api-secret
    SECRET_KEY=your-strong-random-secret-key
-   ADMIN_EMAIL=admin@facefind.com
+   ADMIN_EMAIL=your-admin-email
    ADMIN_PASSWORD=your-strong-admin-password
    FACE_TOLERANCE=0.5
    FACE_MODEL=hog

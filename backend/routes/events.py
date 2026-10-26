@@ -7,7 +7,7 @@ from models import ADMINS, EVENTS, PHOTOS, FACE_ENCODINGS
 from schemas import EventCreate, EventUpdate, EventResponse
 from auth import get_current_admin
 from utils.helpers import generate_event_code
-from utils.storage import delete_event_files, delete_event_cloudinary_files
+from utils.storage import delete_event_files
 
 router = APIRouter(prefix="/api/events", tags=["Events"])
 
@@ -64,11 +64,6 @@ async def delete_event(event_id: str, admin: dict = Depends(get_current_admin), 
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
     delete_event_files(event_id)
-    if not delete_event_cloudinary_files(event_id):
-        raise HTTPException(
-            status_code=502,
-            detail="Event database records were not deleted because Cloudinary cleanup failed",
-        )
     db[FACE_ENCODINGS].delete_many({"event_id": event_id})
     db[PHOTOS].delete_many({"event_id": event_id})
     db[EVENTS].delete_one({"id": event_id})
