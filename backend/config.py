@@ -19,11 +19,12 @@ for d in [UPLOAD_DIR, THUMBNAIL_DIR, TEMP_DIR]:
 
 # Local-only storage
 LOCAL_ONLY = os.getenv("LOCAL_ONLY", "true").lower() == "true"
-MONGODB_URL = (
-    "mongodb://127.0.0.1:27017"
-    if LOCAL_ONLY
-    else os.getenv("MONGODB_URL", "mongodb://127.0.0.1:27017")
-)
+if LOCAL_ONLY:
+    MONGODB_URL = "mongodb://127.0.0.1:27017"
+else:
+    MONGODB_URL = os.getenv("MONGODB_URL", "").strip()
+    if not MONGODB_URL:
+        raise RuntimeError("MONGODB_URL must be configured when LOCAL_ONLY=false")
 MONGODB_DATABASE = os.getenv("MONGODB_DATABASE", "facefind")
 
 # JWT Auth

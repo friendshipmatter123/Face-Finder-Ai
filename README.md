@@ -186,6 +186,8 @@ The local database and image files are persistent across application restarts. B
 
 For Render/Vercel deployment, set `LOCAL_ONLY=false`, then provide MongoDB Atlas and Cloudinary credentials. Render's local disk is not persistent, so online deployment should use external database and object storage.
 
+Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the web service, so `127.0.0.1:27017` will always be refused there.
+
 #### Step A: Deploy Backend on Render.com
 
 1. **Push code to GitHub**
