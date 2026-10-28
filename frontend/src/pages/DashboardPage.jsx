@@ -233,5 +233,6 @@ function StatCard({ icon, label, value, color }) {
       <p className="text-2xl font-bold text-white">{value}</p>
       <p className="text-sm text-slate-400">{label}</p>
     </div>
+    
   );
 }
