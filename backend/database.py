@@ -25,6 +25,8 @@ def init_db():
     database.events.create_index([("admin_id", ASCENDING), ("created_at", DESCENDING)])
     database.photos.create_index([("event_id", ASCENDING), ("created_at", DESCENDING)])
     database.face_encodings.create_index([("event_id", ASCENDING)])
+    database.face_registrations.create_index([("registration_id", ASCENDING)], unique=True)
+    database.face_registration_encodings.create_index([("registration_id", ASCENDING)])
 
 
 def close_db():

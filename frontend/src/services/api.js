@@ -99,6 +99,34 @@ export const searchFace = (eventCode, faceImage, tolerance) => {
   });
 };
 
+export const searchFaceWithRegistration = (eventCode, registrationId, tolerance) => {
+  const formData = new FormData();
+  formData.append('registration_id', registrationId);
+  if (tolerance) formData.append('tolerance', tolerance);
+  return api.post(`/search/${eventCode}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+};
+
+export const registerFaces = (frontFace, leftFace, rightFace, consent) => {
+  const formData = new FormData();
+  formData.append('front_face', frontFace, 'front-face.jpg');
+  if (leftFace) formData.append('left_face', leftFace, 'left-face.jpg');
+  if (rightFace) formData.append('right_face', rightFace, 'right-face.jpg');
+  formData.append('consent', String(consent));
+  return api.post('/registrations/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+};
+
+export const deleteFaceRegistration = (registrationId, deletionToken) => {
+  const formData = new FormData();
+  formData.append('deletion_token', deletionToken);
+  return api.delete(`/registrations/${registrationId}`, { data: formData });
+};
+
 // ──── Files ────
 export const getPhotoUrl = (photoId) => `${API_BASE}/files/photo/${photoId}`;
 export const getThumbnailUrl = (photoId) => `${API_BASE}/files/thumbnail/${photoId}`;

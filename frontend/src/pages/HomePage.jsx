@@ -2,11 +2,15 @@
 // FaceFind Frontend - Home / Search Page
 // ============================================
 import { useState, useRef } from 'react';
-import { FiSearch, FiCamera, FiUpload, FiDownload, FiPackage } from 'react-icons/fi';
+import { FiSearch, FiCamera, FiUpload, FiDownload, FiPackage, FiShield } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import WebcamCapture from '../components/WebcamCapture';
+import MultiAngleRegistration from '../components/MultiAngleRegistration';
 import PhotoGrid from '../components/PhotoGrid';
-import { searchFace, getEventByCode, downloadZip, downloadPhoto } from '../services/api';
+import {
+  searchFace, searchFaceWithRegistration, getEventByCode, downloadZip, downloadPhoto,
+  deleteFaceRegistration,
+} from '../services/api';
 
 export default function HomePage() {
   const [eventCode, setEventCode] = useState('');
@@ -18,6 +22,8 @@ export default function HomePage() {
   const [results, setResults] = useState(null);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [downloading, setDownloading] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [registration, setRegistration] = useState(null);
   const fileInputRef = useRef(null);
 
   // Step 1: Verify event code
@@ -55,7 +61,7 @@ export default function HomePage() {
 
   // Step 3: Search
   const handleSearch = async () => {
-    if (!faceFile) {
+    if (!faceFile && !registration) {
       toast.error('Please upload or capture your face photo first');
       return;
     }
@@ -68,7 +74,9 @@ export default function HomePage() {
     setResults(null);
 
     try {
-      const res = await searchFace(eventInfo.event_code, faceFile);
+      const res = registration
+        ? await searchFaceWithRegistration(eventInfo.event_code, registration.registration_id)
+        : await searchFace(eventInfo.event_code, faceFile);
       setResults(res.data);
 
       if (res.data.total_matches === 0) {
@@ -83,6 +91,25 @@ export default function HomePage() {
       toast.error(msg);
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleRegistration = (data) => {
+    setRegistration(data);
+    setFaceFile(null);
+    setFacePreview(null);
+    setResults(null);
+  };
+
+  const handleDeleteRegistration = async () => {
+    if (!registration) return;
+    try {
+      await deleteFaceRegistration(registration.registration_id, registration.deletion_token);
+      setRegistration(null);
+      setResults(null);
+      toast.success('Your stored facial data was deleted.');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Could not delete facial data.');
     }
   };
 
@@ -207,6 +234,9 @@ export default function HomePage() {
               )}
 
               <div className="flex gap-3 flex-wrap">
+                <button onClick={() => setShowRegistration(true)} className="btn-primary flex items-center gap-2">
+                  <FiShield size={18} /> Register face angles
+                </button>
                 <button
                   onClick={() => setShowWebcam(true)}
                   className="btn-accent flex items-center gap-2"
@@ -228,11 +258,17 @@ export default function HomePage() {
                 />
               </div>
             </div>
+            {registration && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-xl flex flex-wrap items-center justify-between gap-3 text-sm">
+                <span className="text-green-300">Registered angles: {registration.angles.join(', ')}</span>
+                <button onClick={handleDeleteRegistration} className="text-red-300 underline">Delete registration data</button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Step 3: Search Button */}
-        {eventInfo && faceFile && (
+        {eventInfo && (faceFile || registration) && (
           <div className="text-center animate-fade-in">
             <button
               onClick={handleSearch}
@@ -306,6 +342,9 @@ export default function HomePage() {
       </section>
 
       {/* Webcam modal */}
+      {showRegistration && (
+        <MultiAngleRegistration onRegistered={handleRegistration} onClose={() => setShowRegistration(false)} />
+      )}
       {showWebcam && (
         <WebcamCapture
           onCapture={handleWebcamCapture}

@@ -35,6 +35,7 @@ FaceFind/
 │   │   ├── events.py        # Event CRUD
 │   │   ├── photos.py        # Photo upload & processing
 │   │   ├── search.py        # Face search API
+│   │   ├── registrations.py # Consent-based multi-angle registration
 │   │   └── download.py      # Photo download / ZIP
 │   ├── utils/
 │   │   ├── storage.py       # File storage handler
@@ -58,6 +59,21 @@ FaceFind/
 ├── .gitignore
 └── README.md
 ```
+
+### Multi-angle registration
+
+The public search flow supports an optional camera registration at
+`/api/registrations/`. The browser uses MediaPipe Face Mesh landmarks to
+estimate yaw, displays real pose progress, and captures only after a stable
+pose. The front image is required; left and right images may be skipped.
+The API validates one detectable face, lighting, sharpness, and encoding before
+storing separate angle records. Search accepts the returned registration ID and
+deduplicates matches by photo. The returned deletion token is required by
+`DELETE /api/registrations/{registration_id}`.
+
+The existing `face_recognition`/dlib model remains the matching model. This
+feature does not claim improved side-angle accuracy; actual performance depends
+on the configured detector/model and capture conditions.
 
 ## 🚀 Quick Start
 
@@ -182,21 +198,33 @@ backend/temp/
 
 The local database and image files are persistent across application restarts. Back up the MongoDB `facefind` database and the three backend folders if the computer or disk could fail.
 
-### Online deployment (not used by local-only mode)
+### Online deployment
 
-For Render/Vercel deployment, set `LOCAL_ONLY=false`, then provide MongoDB Atlas and Cloudinary credentials. Render's local disk is not persistent, so online deployment should use external database and object storage.
+The backend currently stores uploaded originals, thumbnails, and temporary files on
+the local filesystem. For a real deployment, use a backend host with a persistent
+disk (VPS, Azure VM, or a Render paid persistent disk) and MongoDB Atlas. The
+free Render filesystem is ephemeral, so it is suitable only for testing; uploaded
+photos can be lost after a restart or redeploy. Cloudinary variables are not used
+by the current storage implementation.
 
 Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the web service, so `127.0.0.1:27017` will always be refused there.
 
 #### Step A: Deploy Backend on Render.com
 
 1. **Push code to GitHub**
+
+   From the repository root (`Facefinder AI`):
    ```bash
-   git init
+   git checkout main
+   git pull --rebase origin main
    git add .
-   git commit -m "FaceFind initial commit"
-   git remote add origin https://github.com/YOUR_USERNAME/facefind.git
+   git commit -m "Prepare FaceFind for deployment"
    git push -u origin main
+   ```
+
+   If this is a new clone without a remote, add it once:
+   ```bash
+   git remote add origin https://github.com/friendshipmatter123/Face-Finder-Ai.git
    ```
 
 2. **Go to [render.com](https://render.com)** → Sign up with GitHub
@@ -216,9 +244,6 @@ Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the w
    LOCAL_ONLY=false
    MONGODB_URL=mongodb+srv://<user>:<password>@<cluster-host>/facefind?retryWrites=true&w=majority
    MONGODB_DATABASE=facefind
-   CLOUDINARY_CLOUD_NAME=your-cloud-name
-   CLOUDINARY_API_KEY=your-api-key
-   CLOUDINARY_API_SECRET=your-api-secret
    SECRET_KEY=your-strong-random-secret-key
    ADMIN_EMAIL=your-admin-email
    ADMIN_PASSWORD=your-strong-admin-password
@@ -238,7 +263,7 @@ Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the w
    - `https://facefind-backend.onrender.com/health`
    - `https://facefind-backend.onrender.com/docs`
 
-9. Render free instances can sleep and can restart under memory pressure. Upload 5-10 photos at a time, keep `FACE_MODEL=hog`, and use a paid instance or a separate worker for larger galleries.
+9. Render free instances can sleep and can restart under memory pressure. Upload 5-10 photos at a time, keep `FACE_MODEL=hog`, and use a paid instance with persistent disk (or a VPS) before storing production photos.
 
 #### Step B: Deploy Frontend on Vercel
 
@@ -263,6 +288,12 @@ Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the w
 
 6. Your live URL will be shown by Vercel. Add that exact URL to Render's `CORS_ORIGINS` and redeploy the backend if necessary.
 
+7. Open the live frontend URL and verify admin login, event creation, a small
+   photo upload, processing, public search, and multi-angle registration.
+
+> Set `VITE_API_URL` before the Vercel build. It is embedded into the frontend
+> at build time; changing it later requires a redeploy.
+
 ---
 
 ### Option 2: Railway.app (Alternative)
@@ -271,7 +302,7 @@ Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the w
 2. **New Project** → Deploy from GitHub repo
 3. Railway auto-detects Dockerfile for backend
 4. Add frontend as second service
-5. Set the MongoDB, Cloudinary, JWT, face-processing, and CORS variables listed above
+5. Set the MongoDB, JWT, face-processing, and CORS variables listed above
 6. Done! Both services get public URLs
 
 ---
@@ -318,9 +349,6 @@ docker run -d \
   -p 8001:8001 \
   -e MONGODB_URL=your-mongodb-url \
   -e MONGODB_DATABASE=facefind \
-  -e CLOUDINARY_CLOUD_NAME=your-cloud-name \
-  -e CLOUDINARY_API_KEY=your-cloudinary-key \
-  -e CLOUDINARY_API_SECRET=your-cloudinary-secret \
   -e SECRET_KEY=your-secret-key \
   -e CORS_ORIGINS=http://your-frontend-url \
   --name facefind-api \
@@ -342,8 +370,8 @@ npm run build
 | **Free tier limits** | Render free instances can sleep after inactivity and have limited memory |
 | **Processing** | Upload small batches; a restart stops in-process background tasks |
 | **Persistent database** | MongoDB Atlas stores events, photo metadata, and encodings |
-| **Persistent images** | Cloudinary stores originals and thumbnails |
-| **Render disk** | Temporary only; never rely on it for permanent uploads |
+| **Persistent images** | Use a persistent backend disk or add object storage before production |
+| **Render disk** | Free disk is temporary; never rely on it for permanent uploads |
 | **HTTPS** | Both Render & Vercel give free SSL certificates |
 | **CORS** | Set the exact Vercel URL in Render's `CORS_ORIGINS` |
 | **Secrets** | Keep `backend/.env` out of Git and rotate credentials if exposed |
@@ -360,11 +388,9 @@ Check Render logs first. A native face-recognition crash can produce a 502 respo
 
 #### Storage shows 0 MB
 
-The dashboard reports the sum of photo sizes stored in MongoDB metadata. Cloudinary is the actual image store; Render's local disk is not used for this metric.
-
-#### Cloudinary upload or delete fails
-
-Verify `CLOUDINARY_CLOUD_NAME` is the short Cloudinary dashboard cloud name, not a generated identifier. Also verify the API key and secret. Event deletion removes originals and thumbnails from the event's Cloudinary prefixes before deleting MongoDB records.
+The dashboard reports the sum of photo sizes stored in MongoDB metadata. The
+uploaded files themselves are read from the backend filesystem, so that
+filesystem must be persistent for production use.
 
 ## 📜 License
 

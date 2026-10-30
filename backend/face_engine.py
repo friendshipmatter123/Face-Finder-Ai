@@ -7,7 +7,7 @@ try:
     FACE_REC_AVAILABLE = True
 except ImportError:
     FACE_REC_AVAILABLE = False
-    print("⚠️  face_recognition not available - using DEMO mode")
+    print("face_recognition not available - using DEMO mode")
     
 import cv2
 from PIL import Image
@@ -176,6 +176,28 @@ class FaceEngine:
             return encodings[largest_idx]
 
         return encodings[0]
+
+    def validate_registration_image(self, image_bytes: bytes) -> Tuple[Optional[np.ndarray], str]:
+        """Validate one registration image and return its sole face encoding."""
+        image = self.load_image_from_bytes(image_bytes)
+        if image is None:
+            return None, "The image could not be read. Use a clear JPG, PNG, or WebP image."
+        locations = self.detect_faces(image)
+        if not locations:
+            return None, "No face detected. Improve lighting and position your face in the guide."
+        if len(locations) != 1:
+            return None, "Exactly one face must be visible."
+        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        brightness = float(np.mean(gray))
+        sharpness = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        if brightness < 35 or brightness > 235:
+            return None, "Lighting is too dark or bright. Use even, natural lighting."
+        if sharpness < 20:
+            return None, "The image is too blurry. Hold still and try again."
+        encodings = self.encode_faces(image, locations)
+        if not encodings:
+            return None, "The face could not be encoded. Please try again."
+        return encodings[0], ""
 
     def compare_faces(
         self,
