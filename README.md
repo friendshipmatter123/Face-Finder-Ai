@@ -366,7 +366,7 @@ npm run build
 
 | Point | Details |
 |-------|---------|
-| **Face recognition** | Docker installs pre-built `dlib-bin`; keep `FACE_MODEL=hog` on small instances |
+| **Face recognition** | Docker installs pre-built `dlib-bin` before `face-recognition`; keep `FACE_MODEL=hog` on small instances |
 | **Free tier limits** | Render free instances can sleep after inactivity and have limited memory |
 | **Processing** | Upload small batches; a restart stops in-process background tasks |
 | **Persistent database** | MongoDB Atlas stores events, photo metadata, and encodings |
