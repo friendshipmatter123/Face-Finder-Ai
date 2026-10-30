@@ -2,7 +2,7 @@
 // FaceFind Frontend - Home / Search Page
 // ============================================
 import { useState, useRef } from 'react';
-import { FiSearch, FiCamera, FiUpload, FiDownload, FiPackage, FiShield } from 'react-icons/fi';
+import { FiSearch, FiCamera, FiDownload, FiPackage, FiShield } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import WebcamCapture from '../components/WebcamCapture';
 import MultiAngleRegistration from '../components/MultiAngleRegistration';
@@ -24,7 +24,6 @@ export default function HomePage() {
   const [downloading, setDownloading] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
   const [registration, setRegistration] = useState(null);
-  const fileInputRef = useRef(null);
 
   // Step 1: Verify event code
   const handleEventCode = async () => {
@@ -39,16 +38,6 @@ export default function HomePage() {
     } catch (err) {
       toast.error('Event not found. Check the code and try again.');
       setEventInfo(null);
-    }
-  };
-
-  // Step 2: Handle face image selection
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFaceFile(file);
-      setFacePreview(URL.createObjectURL(file));
-      setResults(null);
     }
   };
 
@@ -178,7 +167,7 @@ export default function HomePage() {
             <span className="text-slate-300 text-2xl sm:text-3xl lg:text-4xl">with AI Face Search</span>
           </h1>
           <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-8 px-4">
-            Upload your selfie or scan your face — our AI will instantly find all photos
+            Scan your face — our AI will instantly find all photos
             where you appear from thousands of event photos.
           </p>
         </div>
@@ -243,19 +232,6 @@ export default function HomePage() {
                 >
                   <FiCamera size={18} /> Use Camera
                 </button>
-                <button
-                  onClick={() => fileInputRef.current.click()}
-                  className="btn-secondary flex items-center gap-2"
-                >
-                  <FiUpload size={18} /> Upload Photo
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
               </div>
             </div>
             {registration && (
