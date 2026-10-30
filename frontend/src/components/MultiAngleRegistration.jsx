@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
-import { FaceMesh } from '@mediapipe/face_mesh';
 import { FiCheck, FiChevronRight, FiRefreshCw, FiShield, FiX } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { registerFaces } from '../services/api';
@@ -204,7 +203,12 @@ export default function MultiAngleRegistration({ onRegistered, onClose }) {
   }, [reviewing]);
 
   const initializeMesh = useCallback(async () => {
-    const mesh = new FaceMesh({
+    const FaceMeshConstructor = window.FaceMesh;
+    if (typeof FaceMeshConstructor !== 'function') {
+      setStatus('Face detection could not load. Please refresh and retry.');
+      return;
+    }
+    const mesh = new FaceMeshConstructor({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     });
     mesh.setOptions({
@@ -219,7 +223,9 @@ export default function MultiAngleRegistration({ onRegistered, onClose }) {
   }, [inspectFrame]);
 
   useEffect(() => {
-    initializeMesh();
+    initializeMesh().catch(() => {
+      setStatus('Face detection is temporarily unavailable. Please refresh and retry.');
+    });
     return () => {
       stopCamera();
       meshRef.current?.close?.();
