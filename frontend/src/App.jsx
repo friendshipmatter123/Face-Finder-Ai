@@ -10,6 +10,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import EventDetailPage from './pages/EventDetailPage';
+import DemoPage from './pages/DemoPage';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -39,6 +40,7 @@ function AppRoutes() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/demo" element={<DemoPage />} />
             <Route path="/admin/login" element={<LoginPage />} />
 
             {/* Registration is disabled */}

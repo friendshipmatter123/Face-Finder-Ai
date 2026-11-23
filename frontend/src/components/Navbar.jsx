@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiSearch, FiLogOut, FiGrid, FiUser, FiMenu, FiX } from 'react-icons/fi';
+import { FiSearch, FiLogOut, FiGrid, FiUser, FiMenu, FiX, FiPlay } from 'react-icons/fi';
 
 export default function Navbar() {
   const { admin, logout } = useAuth();
@@ -39,6 +39,13 @@ export default function Navbar() {
               className="text-slate-300 hover:text-white transition-colors text-sm font-medium"
             >
               Search Photos
+            </Link>
+            <Link
+              to="/demo"
+              className="flex items-center gap-1 text-primary-300 hover:text-primary-200 transition-colors text-sm font-medium"
+            >
+              <FiPlay size={14} />
+              Try Demo
             </Link>
 
             {admin ? (
@@ -90,6 +97,14 @@ export default function Navbar() {
               className="block text-slate-300 hover:text-white transition-colors text-sm font-medium py-2"
             >
               Search Photos
+            </Link>
+            <Link
+              to="/demo"
+              onClick={closeMenu}
+              className="flex items-center gap-2 text-primary-300 hover:text-primary-200 transition-colors text-sm font-medium py-2"
+            >
+              <FiPlay size={14} />
+              Try Demo
             </Link>
 
             {admin ? (

@@ -137,4 +137,28 @@ export const downloadPhoto = (photoId) =>
 export const downloadZip = (photoIds) =>
   api.post('/files/download-zip', photoIds, { responseType: 'blob' });
 
+// ──── Public Demo ────
+export const prepareDemo = (files) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('files', file));
+  return api.post('/demo/prepare', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 600000,
+  });
+};
+
+export const searchDemoFace = (sessionId, faceImage) => {
+  const formData = new FormData();
+  formData.append('face_image', faceImage);
+  return api.post(`/demo/search/${sessionId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  });
+};
+
+export const closeDemo = (sessionId) => api.delete(`/demo/${sessionId}`);
+
+export const getDemoPhotoUrl = (sessionId, photoId) =>
+  `${API_BASE}/demo/file/${sessionId}/${photoId}`;
+
 export default api;
