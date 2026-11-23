@@ -12,7 +12,7 @@ from config import (
 )
 from models import ADMINS, EVENTS
 from database import database
-from routes import admin, events, photos, search, download, registrations
+from routes import admin, events, photos, search, download, registrations, demo
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +45,7 @@ app.include_router(photos.router)
 app.include_router(search.router)
 app.include_router(download.router)
 app.include_router(registrations.router)
+app.include_router(demo.router)
 
 
 @app.on_event("startup")

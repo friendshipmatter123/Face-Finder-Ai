@@ -99,13 +99,25 @@ class FaceEngine:
         If face_locations is None, will detect faces first.
         """
         if not FACE_REC_AVAILABLE:
-            # DEMO MODE: Generate random 128-D vectors as placeholder encodings
+            # DEMO MODE: Create deterministic feature vectors from each detected face.
             if face_locations is None:
                 face_locations = self.detect_faces(image)
             if not face_locations:
                 return []
-            # Return random encodings for demo
-            return [np.random.rand(128).astype(np.float64) for _ in face_locations]
+            encodings = []
+            for (top, right, bottom, left) in face_locations:
+                top, right, bottom, left = max(0, top), min(image.shape[1], right), min(image.shape[0], bottom), max(0, left)
+                face = image[top:bottom, left:right]
+                if face.size == 0:
+                    continue
+                gray = cv2.cvtColor(face, cv2.COLOR_RGB2GRAY)
+                resized = cv2.resize(gray, (16, 8), interpolation=cv2.INTER_AREA).astype(np.float64)
+                vector = resized.flatten()
+                norm = float(np.linalg.norm(vector))
+                if norm:
+                    vector = vector / norm
+                encodings.append(vector)
+            return encodings
         
         try:
             if face_locations is None:
