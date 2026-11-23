@@ -1,11 +1,12 @@
 # 🔍 Find Ur Photos — AI Face Recognition Photo Search Platform
 
 > Upload all photos → Scan your face → Get only YOUR photos instantly!
-
-
 ## 🎯 What is FaceFind?
 
 Find Ur Photos is an AI-powered web application that allows event organizers to upload event photos, and users can find photos containing their face by scanning via webcam or uploading a selfie.
+
+It also includes a public demo mode that requires no admin login and keeps demo
+uploads separate from the event database and Cloudinary.
 
 ## 🏗️ Tech Stack
 
@@ -36,6 +37,7 @@ FaceFind/
 │   │   ├── events.py        # Event CRUD
 │   │   ├── photos.py        # Photo upload & processing
 │   │   ├── search.py        # Face search API
+│   │   ├── demo.py          # Temporary 5-photo public demo
 │   │   ├── registrations.py # Consent-based multi-angle registration
 │   │   └── download.py      # Photo download / ZIP
 │   ├── utils/
@@ -48,7 +50,7 @@ FaceFind/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # Navbar, PhotoGrid, WebcamCapture
-│   │   ├── pages/           # Home, Login, Dashboard, EventDetail
+│   │   ├── pages/           # Home, Demo, Login, Dashboard, EventDetail
 │   │   ├── services/api.js  # Axios API client
 │   │   ├── context/         # AuthContext (JWT)
 │   │   ├── App.jsx          # Router & layout
@@ -75,6 +77,31 @@ deduplicates matches by photo. The returned deletion token is required by
 The existing `face_recognition`/dlib model remains the matching model. This
 feature does not claim improved side-angle accuracy; actual performance depends
 on the configured detector/model and capture conditions.
+
+### Public demo mode
+
+Open `http://localhost:5173/demo` to try the complete face-search flow without
+an admin account or event code.
+
+1. Upload up to 5 JPG, PNG, or WebP photos.
+2. The backend temporarily detects faces and creates in-memory face encodings.
+3. Upload or capture a selfie to find matching photos.
+4. Open, inspect, or clear the demo results.
+
+Demo data is not inserted into MongoDB and is never uploaded to Cloudinary.
+Only temporary original files are written to
+`backend/temp/demo/<session-id>/`. Face encodings remain in the backend process
+memory for that demo session. The temporary session and files are deleted when
+the user clicks **Clear Demo**, or automatically after 30 minutes.
+
+Demo API endpoints:
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `POST` | `/api/demo/prepare` | Upload and process up to 5 demo photos |
+| `POST` | `/api/demo/search/{session_id}` | Match a face against the temporary session |
+| `GET` | `/api/demo/file/{session_id}/{photo_id}` | Retrieve a temporary demo photo |
+| `DELETE` | `/api/demo/{session_id}` | Clear the demo session and temporary files |
 
 ## 🚀 Quick Start
 
@@ -127,6 +154,7 @@ npm run dev
 ### Access
 
 - Frontend: http://localhost:5173
+- Public demo: http://localhost:5173/demo
 - Backend API: http://localhost:8001
 - API Docs: http://localhost:8001/docs
 
@@ -148,6 +176,8 @@ Public admin registration is disabled. Configure the initial admin using `ADMIN_
 
 ## 🔄 System Workflow
 
+### Event search workflow
+
 1. **Admin** creates an event and uploads photos
 2. **System** detects faces & generates encodings (background)
 3. **User** visits event page → scans face (webcam/upload)
@@ -155,12 +185,23 @@ Public admin registration is disabled. Configure the initial admin using `ADMIN_
 5. **System** displays all matching photos
 6. **User** downloads selected photos (single/bulk ZIP)
 
+### Public demo workflow
+
+1. **User** opens `/demo` without logging in
+2. **User** uploads up to 5 photos
+3. **System** processes those photos only in a temporary server session
+4. **User** uploads or captures a face photo
+5. **AI** compares the face against the 5-photo demo set
+6. **System** displays local matches
+7. **Demo cleanup** removes temporary files and encodings after 30 minutes or when cleared
+
 ### Storage and processing
 
 - Original photos are stored in `backend/uploads/<event-id>/`.
 - Generated thumbnails are stored in `backend/thumbnails/`.
 - MongoDB stores event, photo metadata, and face encodings in the local `facefind` database.
 - No Cloudinary, MongoDB Atlas, or internet connection is required in local-only mode.
+- Public demo sessions use temporary local files and process memory only. They do not use MongoDB or Cloudinary.
 - Processing images are resized to `MAX_PROCESSING_DIM` (default `1000`) to reduce memory usage.
 - Upload batches are limited by `MAX_BULK_UPLOAD` (default `25`). Smaller batches are recommended on Render's free instance.
 - If the local process stops during processing, open the event and use **Restart processing**. Unprocessed photos remain on the local disk.
@@ -290,7 +331,8 @@ Do not set `LOCAL_ONLY=true` on Render. Render does not run MongoDB inside the w
 6. Your live URL will be shown by Vercel. Add that exact URL to Render's `CORS_ORIGINS` and redeploy the backend if necessary.
 
 7. Open the live frontend URL and verify admin login, event creation, a small
-   photo upload, processing, public search, and multi-angle registration.
+   photo upload, processing, public search, public `/demo` mode, and
+   multi-angle registration.
 
 > Set `VITE_API_URL` before the Vercel build. It is embedded into the frontend
 > at build time; changing it later requires a redeploy.
@@ -332,7 +374,7 @@ Perfect for **college demo/presentation** — share your local app via internet 
 
 4. **Copy the URL** (e.g., `https://abc123.ngrok-free.app`)
 
-5. **Update frontend temporarily** — set `VITE_API_URL` to the ngrok URL
+5. **Update frontend temporarily** — set `VITE_API_URL` to `https://abc123.ngrok-free.app/api`
 
 6. **Share** the frontend URL with anyone — it works from any device!
 
