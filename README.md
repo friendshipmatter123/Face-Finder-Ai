@@ -2,6 +2,7 @@
 
 > Upload all photos → Scan your face → Get only YOUR photos instantly!
 
+
 ## 🎯 What is FaceFind?
 
 Find Ur Photos is an AI-powered web application that allows event organizers to upload event photos, and users can find photos containing their face by scanning via webcam or uploading a selfie.
