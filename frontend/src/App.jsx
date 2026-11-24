@@ -1,16 +1,26 @@
 // ============================================
 // FaceFind Frontend - Main App with Routing
 // ============================================
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import EventDetailPage from './pages/EventDetailPage';
-import DemoPage from './pages/DemoPage';
+
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
+const DemoPage = lazy(() => import('./pages/DemoPage'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-[50vh] flex items-center justify-center" aria-label="Loading page">
+      <div className="w-10 h-10 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 // Protected Route wrapper
 function ProtectedRoute({ children }) {
@@ -37,7 +47,8 @@ function AppRoutes() {
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-1">
-          <Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
             <Route path="/demo" element={<DemoPage />} />
@@ -66,7 +77,8 @@ function AppRoutes() {
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+            </Routes>
+          </Suspense>
         </main>
         <Footer />
       </div>

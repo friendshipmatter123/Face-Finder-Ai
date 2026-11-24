@@ -1,12 +1,12 @@
 // ============================================
 // FaceFind Frontend - Home / Search Page
 // ============================================
-import { useState, useRef } from 'react';
+import { lazy, Suspense, useState, useRef } from 'react';
 import { FiSearch, FiCamera, FiDownload, FiPackage, FiShield } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import WebcamCapture from '../components/WebcamCapture';
-import MultiAngleRegistration from '../components/MultiAngleRegistration';
-import PhotoGrid from '../components/PhotoGrid';
+const WebcamCapture = lazy(() => import('../components/WebcamCapture'));
+const MultiAngleRegistration = lazy(() => import('../components/MultiAngleRegistration'));
+const PhotoGrid = lazy(() => import('../components/PhotoGrid'));
 import {
   searchFace, searchFaceWithRegistration, getEventByCode, downloadZip, downloadPhoto,
   deleteFaceRegistration,
@@ -187,6 +187,7 @@ export default function HomePage() {
             <input
               type="text"
               value={eventCode}
+              aria-label="Event code"
               onChange={(e) => setEventCode(e.target.value.toUpperCase())}
               placeholder="e.g., ABC12345"
               className="input-field uppercase tracking-widest text-center text-lg font-mono"
@@ -307,25 +308,31 @@ export default function HomePage() {
             </div>
 
             {results.total_matches > 0 && (
-              <PhotoGrid
-                photos={results.results}
-                selectable={true}
-                onSelectionChange={setSelectedPhotos}
-              />
+              <Suspense fallback={<div className="h-64 rounded-2xl bg-slate-800/50 animate-pulse" aria-label="Loading photos" />}>
+                <PhotoGrid
+                  photos={results.results}
+                  selectable={true}
+                  onSelectionChange={setSelectedPhotos}
+                />
+              </Suspense>
             )}
           </div>
         )}
       </section>
 
       {/* Webcam modal */}
-      {showRegistration && (
-        <MultiAngleRegistration onRegistered={handleRegistration} onClose={() => setShowRegistration(false)} />
-      )}
-      {showWebcam && (
-        <WebcamCapture
-          onCapture={handleWebcamCapture}
-          onClose={() => setShowWebcam(false)}
-        />
+      {(showRegistration || showWebcam) && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" aria-label="Loading capture tool"><div className="w-10 h-10 border-2 border-white/30 border-t-white rounded-full animate-spin" /></div>}>
+          {showRegistration && (
+            <MultiAngleRegistration onRegistered={handleRegistration} onClose={() => setShowRegistration(false)} />
+          )}
+          {showWebcam && (
+            <WebcamCapture
+              onCapture={handleWebcamCapture}
+              onClose={() => setShowWebcam(false)}
+            />
+          )}
+        </Suspense>
       )}
     </div>
   );

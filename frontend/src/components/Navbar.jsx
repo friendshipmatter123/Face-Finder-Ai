@@ -25,7 +25,13 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Application logo */}
           <Link to="/" className="flex items-center gap-3" onClick={closeMenu}>
-            <img src="/jain-logo.png" alt="Find Ur Photos" className="w-9 h-9 rounded" />
+            <img
+              src="/jain-logo.png"
+              alt="Find Ur Photos"
+              width="36"
+              height="36"
+              className="w-9 h-9 rounded"
+            />
             <div className="flex flex-col leading-tight">
               <span className="text-lg sm:text-xl font-bold text-white tracking-wide">Find Ur Photos</span>
               <span className="text-[10px] text-slate-400 tracking-widest uppercase">FaceFind AI</span>
@@ -83,6 +89,8 @@ export default function Navbar() {
           <button
             className="md:hidden text-slate-300 hover:text-white p-2"
             onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <FiX size={24} /> : <FiMenu size={24} />}
           </button>

@@ -46,7 +46,7 @@ export default function WebcamCapture({ onCapture, onClose }) {
       <div className="glass rounded-2xl p-6 max-w-lg w-full">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold">Scan Your Face</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">
+          <button onClick={onClose} className="text-slate-400 hover:text-white" aria-label="Close camera">
             <FiX size={20} />
           </button>
         </div>
